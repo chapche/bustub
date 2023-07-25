@@ -87,21 +87,22 @@ TEST(TrieStoreTest, MixedConcurrentTest) {
   std::vector<std::thread> threads;
 
   const int keys_per_thread = 10000;
+  const int thread_num = 4;
 
-  for (int tid = 0; tid < 4; tid++) {
+  for (int tid = 0; tid < thread_num; tid++) {
     std::thread t([&store, tid] {
       for (uint32_t i = 0; i < keys_per_thread; i++) {
-        std::string key = fmt::format("{:#05}", i * 4 + tid);
-        std::string value = fmt::format("value-{:#08}", i * 4 + tid);
+        std::string key = fmt::format("{:#05}", i * thread_num + tid);
+        std::string value = fmt::format("value-{:#08}", i * thread_num + tid);
         store.Put<std::string>(key, value);
       }
       for (uint32_t i = 0; i < keys_per_thread; i++) {
-        std::string key = fmt::format("{:#05}", i * 4 + tid);
+        std::string key = fmt::format("{:#05}", i * thread_num + tid);
         store.Remove(key);
       }
       for (uint32_t i = 0; i < keys_per_thread; i++) {
-        std::string key = fmt::format("{:#05}", i * 4 + tid);
-        std::string value = fmt::format("new-value-{:#08}", i * 4 + tid);
+        std::string key = fmt::format("{:#05}", i * thread_num + tid);
+        std::string value = fmt::format("new-value-{:#08}", i * thread_num + tid);
         store.Put<std::string>(key, value);
       }
     });
@@ -113,7 +114,7 @@ TEST(TrieStoreTest, MixedConcurrentTest) {
   }
 
   // verify final trie
-  for (uint32_t i = 0; i < keys_per_thread * 4; i++) {
+  for (uint32_t i = 0; i < keys_per_thread * thread_num; i++) {
     std::string key = fmt::format("{:#05}", i);
     std::string value = fmt::format("new-value-{:#08}", i);
     auto guard = store.Get<std::string>(key);
