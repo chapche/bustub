@@ -24,9 +24,8 @@ auto Trie::Get(std::string_view key) const -> const T * {
     }
   }
   if (bFound and pNode and pNode->is_value_node_) {
-    // FIXME: Is it safe to do this ?
+    // ValueGuard will hold a ref of root, which avoids dangling pointer
     auto pTrieNodeWithValue = dynamic_cast<const TrieNodeWithValue<T> *>(pNode.get());
-    // under what circumstance could this be nullptr ???
     if (nullptr == pTrieNodeWithValue) {
       return nullptr;
     }
