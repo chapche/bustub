@@ -27,14 +27,13 @@ void TrieStore::Put(std::string_view key, T value) {
   // You will need to ensure there is only one writer at a time. Think of how you can achieve this.
   // The logic should be somehow similar to `TrieStore::Get`.
   // throw NotImplementedException("TrieStore::Put is not implemented.");
-  
+
   write_lock_.lock();
-  auto tree = root_.Put<T>(key, std::move(value));  
+  auto tree = root_.Put<T>(key, std::move(value));
   root_lock_.lock();
   root_ = tree;  // copy constructor is not guranteed to be ATOMIC!
   root_lock_.unlock();
   write_lock_.unlock();
-  return;
 }
 
 void TrieStore::Remove(std::string_view key) {
@@ -47,7 +46,6 @@ void TrieStore::Remove(std::string_view key) {
   root_ = tree;
   root_lock_.unlock();
   write_lock_.unlock();
-  return;
 }
 
 // Below are explicit instantiation of template functions.

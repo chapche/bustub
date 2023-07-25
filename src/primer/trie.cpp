@@ -13,23 +13,23 @@ auto Trie::Get(std::string_view key) const -> const T * {
   // nullptr. After you find the node, you should use `dynamic_cast` to cast it to `const TrieNodeWithValue<T> *`. If
   // dynamic_cast returns `nullptr`, it means the type of the value is mismatched, and you should return nullptr.
   // Otherwise, return the value.
-  auto pNode = root_;
-  bool bFound = true;
+  auto p_node = root_;
+  bool is_found = true;
   for (auto c : key) {
-    if (pNode and pNode->children_.find(c) != pNode->children_.end()) {
-      pNode = pNode->children_.at(c);
+    if (p_node && p_node->children_.find(c) != p_node->children_.end()) {
+      p_node = p_node->children_.at(c);
     } else {
-      bFound = false;
+      is_found = false;
       break;
     }
   }
-  if (bFound and pNode and pNode->is_value_node_) {
+  if (is_found && p_node && p_node->is_value_node_) {
     // ValueGuard will hold a ref of root, which avoids dangling pointer
-    auto pTrieNodeWithValue = dynamic_cast<const TrieNodeWithValue<T> *>(pNode.get());
-    if (nullptr == pTrieNodeWithValue) {
+    auto p_trie_node_with_value = dynamic_cast<const TrieNodeWithValue<T> *>(p_node.get());
+    if (nullptr == p_trie_node_with_value) {
       return nullptr;
     }
-    return pTrieNodeWithValue->value_.get();
+    return p_trie_node_with_value->value_.get();
   }
   return nullptr;
 }
@@ -46,16 +46,16 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
   // create value node first
   std::shared_ptr<TrieNode> new_mutable_node;
   if (nullptr == root_) {
-   new_mutable_node = std::make_shared<TrieNode>();
-   LOG_DEBUG("new_mutable_node is_value_node_ %d", new_mutable_node->is_value_node_);
+    new_mutable_node = std::make_shared<TrieNode>();
   } else {
     new_mutable_node = std::shared_ptr<TrieNode>(root_->Clone());
   }
 
   std::shared_ptr<TrieNode> last_node;
   std::shared_ptr<const TrieNode> new_root = new_mutable_node;
-  if (0 == key.size()) {
-    new_root = std::make_shared<TrieNodeWithValue<T>>(new_mutable_node->children_, std::make_shared<T>(std::move(value)));
+  if (key.empty()) {
+    new_root =
+        std::make_shared<TrieNodeWithValue<T>>(new_mutable_node->children_, std::make_shared<T>(std::move(value)));
     return Trie(new_root);
   }
   for (int i = 0; i < size; i++) {
@@ -65,14 +65,14 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
     } else {
       last_node = std::make_shared<TrieNode>();
     }
-    if (i == size -1) {
+    if (i == size - 1) {
       // we should create a value node
-      new_mutable_node->children_[c] = std::make_shared<TrieNodeWithValue<T>>(last_node->children_, std::make_shared<T>(std::move(value)));
+      new_mutable_node->children_[c] =
+          std::make_shared<TrieNodeWithValue<T>>(last_node->children_, std::make_shared<T>(std::move(value)));
       break;
-    } else {
-      new_mutable_node->children_[c] = last_node;
-      new_mutable_node = last_node;
     }
+    new_mutable_node->children_[c] = last_node;
+    new_mutable_node = last_node;
   }
   return Trie(new_root);
 }
@@ -91,7 +91,7 @@ auto Trie::Remove(std::string_view key) const -> Trie {
   std::shared_ptr<TrieNode> new_mutable_node(root_->Clone());
   std::shared_ptr<TrieNode> last_node;
   std::shared_ptr<const TrieNode> new_root = new_mutable_node;
-  if (0 == key.size()) {
+  if (key.empty()) {
     new_root = std::make_shared<TrieNode>(new_mutable_node->children_);
     return Trie(new_root);
   }
@@ -111,13 +111,13 @@ auto Trie::Remove(std::string_view key) const -> Trie {
         new_mutable_node->children_.erase(c);
       } else if (last_node->is_value_node_) {
         new_mutable_node->children_[c] = std::make_shared<TrieNode>(last_node->children_);
-        LOG_DEBUG("new_mutable_node after remove is_value_node:%d index:%d char:%c", new_mutable_node->children_[c]->is_value_node_, i, c);
+        LOG_DEBUG("new_mutable_node after remove is_value_node:%d index:%d char:%c",
+                  new_mutable_node->children_[c]->is_value_node_, i, c);
       }
       break;
-    } else {
-      new_mutable_node->children_[c] = last_node;
-      new_mutable_node = last_node;
     }
+    new_mutable_node->children_[c] = last_node;
+    new_mutable_node = last_node;
   }
 
   return Trie(new_root);
