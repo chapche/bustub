@@ -92,9 +92,7 @@ auto Trie::Remove(std::string_view key) const -> Trie {
   std::shared_ptr<TrieNode> last_node;
   std::shared_ptr<const TrieNode> new_root = new_mutable_node;
   if (0 == key.size()) {
-    if (new_mutable_node->is_value_node_) {
-       new_mutable_node->is_value_node_ = false;
-    }
+    new_root = std::make_shared<TrieNode>(new_mutable_node->children_);
     return Trie(new_root);
   }
   // get last value node
