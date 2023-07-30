@@ -79,10 +79,20 @@ class BasicPageGuard {
   }
 
  private:
+  void Steal(BasicPageGuard &that) {
+    bpm_ = that.bpm_;
+    page_ = that.page_;
+    is_dirty_ = that.is_dirty_;
+    that.bpm_ = nullptr;
+    that.page_ = nullptr;
+    that.is_dirty_ = false;
+  }
+
+ private:
   friend class ReadPageGuard;
   friend class WritePageGuard;
 
-  [[maybe_unused]] BufferPoolManager *bpm_{nullptr};
+  BufferPoolManager *bpm_{nullptr};
   Page *page_{nullptr};
   bool is_dirty_{false};
 };

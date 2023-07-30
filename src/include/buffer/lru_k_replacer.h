@@ -27,6 +27,7 @@ enum class AccessType { Unknown = 0, Get, Scan };
 
 class LRUKNode {
   friend class LRUKReplacer;
+
  private:
   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
   // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
@@ -35,9 +36,10 @@ class LRUKNode {
   [[maybe_unused]] size_t k_;
   frame_id_t fid_;
   bool is_evictable_{false};
+
  public:
   LRUKNode() = default;
-  LRUKNode(frame_id_t frame_id) : fid_(frame_id) {}
+  explicit LRUKNode(frame_id_t frame_id) : fid_(frame_id) {}
 };
 
 /**
@@ -159,7 +161,7 @@ class LRUKReplacer {
   size_t curr_size_{0};
   [[maybe_unused]] size_t replacer_size_;
   [[maybe_unused]] size_t k_;
-  [[maybe_unused]] std::mutex latch_;
+  std::mutex latch_;
 };
 
 }  // namespace bustub
