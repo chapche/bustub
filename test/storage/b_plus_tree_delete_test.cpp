@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <random>
 
 #include "buffer/buffer_pool_manager.h"
 #include "gtest/gtest.h"
@@ -23,7 +24,7 @@ namespace bustub {
 
 using bustub::DiskManagerUnlimitedMemory;
 
-TEST(BPlusTreeTests, DISABLED_DeleteTest1) {
+TEST(BPlusTreeTests, DeleteTest1) {
   // create KeyComparator and index schema
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());
@@ -90,7 +91,7 @@ TEST(BPlusTreeTests, DISABLED_DeleteTest1) {
   delete bpm;
 }
 
-TEST(BPlusTreeTests, DISABLED_DeleteTest2) {
+TEST(BPlusTreeTests, DeleteTest2) {
   // create KeyComparator and index schema
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());
@@ -101,7 +102,7 @@ TEST(BPlusTreeTests, DISABLED_DeleteTest2) {
   page_id_t page_id;
   auto header_page = bpm->NewPage(&page_id);
   // create b+ tree
-  BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", header_page->GetPageId(), bpm, comparator);
+  BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", header_page->GetPageId(), bpm, comparator, 2, 3);
   GenericKey<8> index_key;
   RID rid;
   // create transaction
@@ -125,13 +126,14 @@ TEST(BPlusTreeTests, DISABLED_DeleteTest2) {
     int64_t value = key & 0xFFFFFFFF;
     EXPECT_EQ(rids[0].GetSlotNum(), value);
   }
-
+  LOG_DEBUG("Before Remove:");
+  LOG_DEBUG("%s", tree.DrawBPlusTree().c_str());
   std::vector<int64_t> remove_keys = {1, 5, 3, 4};
   for (auto key : remove_keys) {
     index_key.SetFromInteger(key);
     tree.Remove(index_key, transaction);
+    LOG_DEBUG("%s", tree.DrawBPlusTree().c_str());
   }
-
   int64_t size = 0;
   bool is_present;
 
@@ -156,4 +158,84 @@ TEST(BPlusTreeTests, DISABLED_DeleteTest2) {
   delete transaction;
   delete bpm;
 }
+
+TEST(BPlusTreeTests, DeleteTest3) {
+  // create KeyComparator and index schema
+  auto key_schema = ParseCreateStatement("a bigint");
+  GenericComparator<8> comparator(key_schema.get());
+
+  auto disk_manager = std::make_unique<DiskManagerUnlimitedMemory>();
+  auto *bpm = new BufferPoolManager(50, disk_manager.get());
+  // create and fetch header_page
+  page_id_t page_id;
+  auto header_page = bpm->NewPage(&page_id);
+  // create b+ tree
+  BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", header_page->GetPageId(), bpm, comparator, 3, 4);
+  GenericKey<8> index_key;
+  RID rid;
+  // create transaction
+  auto *transaction = new Transaction(0);
+
+  const size_t TOTAL_KEYS = 20;
+  for (size_t key = 0; key < TOTAL_KEYS; key++) {
+    uint32_t value = key;
+    rid.Set(value, value);
+    index_key.SetFromInteger(key);
+    tree.Insert(index_key, rid, transaction);
+  }
+
+  std::vector<RID> rids;
+  for (size_t key = 0; key < TOTAL_KEYS; key++) {
+    rids.clear();
+    index_key.SetFromInteger(key);
+    tree.GetValue(index_key, &rids);
+    EXPECT_EQ(rids.size(), 1);
+
+    int64_t value = key & 0xFFFFFFFF;
+    EXPECT_EQ(rids[0].GetSlotNum(), value);
+  }
+  LOG_DEBUG("%s", tree.DrawBPlusTree().c_str());
+  // randomly delete keys
+  std::random_device r;
+  std::default_random_engine gen(r());
+  std::uniform_int_distribution<size_t> dis(0, TOTAL_KEYS - 1);
+  auto base_key = dis(gen);
+  // size_t base_key = 449;
+  LOG_DEBUG("base_key: %zu", base_key);
+  int cnt = 0;
+  std::vector<size_t> remove_keys;
+  for (auto i = base_key; cnt < 10 && i < TOTAL_KEYS; cnt++, i++) {
+    index_key.SetFromInteger(i);
+    tree.Remove(index_key, transaction);
+    LOG_DEBUG("%s", tree.DrawBPlusTree().c_str());
+    remove_keys.push_back(i);
+  }
+  LOG_DEBUG("%s", tree.DrawBPlusTree().c_str());
+  int64_t size = 0;
+  bool is_present;
+  for (size_t key = 0; key < TOTAL_KEYS; key++) {
+    rids.clear();
+    index_key.SetFromInteger(key);
+    is_present = tree.GetValue(index_key, &rids);
+
+    if (!is_present) {
+      if (remove_keys.end() == std::find(remove_keys.begin(), remove_keys.end(), key)) {
+        LOG_DEBUG("key: %zu", key);
+      }
+      ASSERT_NE(std::find(remove_keys.begin(), remove_keys.end(), key), remove_keys.end());
+    } else {
+      ASSERT_EQ(rids.size(), 1);
+      ASSERT_EQ(rids[0].GetPageId(), key);
+      ASSERT_EQ(rids[0].GetSlotNum(), key);
+      size = size + 1;
+    }
+  }
+
+  EXPECT_EQ(size, TOTAL_KEYS - remove_keys.size());
+
+  bpm->UnpinPage(HEADER_PAGE_ID, true);
+  delete transaction;
+  delete bpm;
+}
+
 }  // namespace bustub

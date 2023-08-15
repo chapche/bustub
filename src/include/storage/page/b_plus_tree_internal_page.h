@@ -73,6 +73,13 @@ class BPlusTreeInternalPage : public BPlusTreePage {
    */
   auto ValueAt(int index) const -> ValueType;
 
+  void InsertAt(int index, const MappingType &pair);
+
+  void RemoveAt(int index);
+
+  auto MappingAt(int index) const -> const MappingType & { return array_[index]; }
+  void SetMappingAt(int index, const MappingType &pair) { array_[index] = pair; }
+
   /**
    * @brief For test only, return a string representing all keys in
    * this internal page, formatted as "(key1,key2,key3,...)"

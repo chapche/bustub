@@ -187,13 +187,13 @@ auto main(int argc, char **argv) -> int {
           index.GetValue(index_key, &rids);
 
           if (!KeyWillVanish(key) && rids.empty()) {
-            std::string msg = fmt::format("key not found: {}", key);
+            std::string msg = fmt::format("key not found: {} cnt:{}", key, cnt);
             throw std::runtime_error(msg);
           }
 
           if (!KeyWillVanish(key) && !KeyWillChange(key)) {
             if (rids.size() != 1) {
-              std::string msg = fmt::format("key not found: {}", key);
+              std::string msg = fmt::format("key not found: {} cnt:{}", key, cnt);
               throw std::runtime_error(msg);
             }
             if (static_cast<size_t>(rids[0].GetPageId()) != key || static_cast<size_t>(rids[0].GetSlotNum()) != key) {

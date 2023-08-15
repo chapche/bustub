@@ -122,6 +122,10 @@ class BPlusTree {
 
   void PrintTree(page_id_t page_id, const BPlusTreePage *page);
 
+  void DoSplit(Context &ctx);
+
+  void DoMerge(Context &ctx);
+
   /**
    * @brief Convert A B+ tree into a Printable B+ tree
    *
@@ -161,7 +165,7 @@ struct PrintableBPlusTree {
       std::vector<PrintableBPlusTree *> new_que;
 
       for (auto &t : que) {
-        int padding = (t->size_ - t->keys_.size()) / 2;
+        int padding = 4;  // (t->size_ - t->keys_.size()) / 2;
         out_buf << std::string(padding, ' ');
         out_buf << t->keys_;
         out_buf << std::string(padding, ' ');
