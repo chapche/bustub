@@ -32,7 +32,7 @@ auto INDEXITERATOR_TYPE::IsEnd() -> bool {
     return false;
   }
   int size = leaf_page->GetSize();
-  return size == 0;
+  return index_ >= size;
 }
 
 INDEX_TEMPLATE_ARGUMENTS

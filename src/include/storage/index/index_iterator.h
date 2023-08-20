@@ -24,6 +24,7 @@ class IndexIterator {
  public:
   // you may define your own constructor based on your member variables
   IndexIterator(BufferPoolManager *bpm, ReadPageGuard &&that, int index);
+  IndexIterator(IndexIterator &&) noexcept = default;
   ~IndexIterator();  // NOLINT
 
   auto IsEnd() -> bool;
