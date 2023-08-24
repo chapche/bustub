@@ -63,6 +63,11 @@ class SimpleAggregationHashTable {
     return {values};
   }
 
+  void Init() {
+    AggregateKey agg_key;
+    ht_.insert({agg_key, GenerateInitialAggregateValue()});
+  }
+
   /**
    * TODO(Student)
    *
@@ -72,13 +77,57 @@ class SimpleAggregationHashTable {
    */
   void CombineAggregateValues(AggregateValue *result, const AggregateValue &input) {
     for (uint32_t i = 0; i < agg_exprs_.size(); i++) {
+      auto &res_value = result->aggregates_[i];
+      const auto &input_value = input.aggregates_[i];
       switch (agg_types_[i]) {
-        case AggregationType::CountStarAggregate:
-        case AggregationType::CountAggregate:
-        case AggregationType::SumAggregate:
-        case AggregationType::MinAggregate:
-        case AggregationType::MaxAggregate:
+        case AggregationType::CountStarAggregate: {
+          res_value = res_value.Add(ValueFactory::GetIntegerValue(1));
           break;
+        }
+        case AggregationType::CountAggregate: {
+          if (input_value.IsNull()) {
+            break;
+          }
+          if (res_value.IsNull()) {
+            res_value = ValueFactory::GetIntegerValue(1);
+          } else {
+            // +=
+            res_value = res_value.Add(ValueFactory::GetIntegerValue(1));
+          }
+          break;
+        }
+        case AggregationType::SumAggregate: {
+          if (input_value.IsNull()) {
+            break;
+          }
+          if (res_value.IsNull()) {
+            res_value = input_value;
+          } else {
+            // +=
+            res_value = res_value.Add(input_value);
+          }
+          break;
+        }
+        case AggregationType::MinAggregate: {
+          if (input_value.IsNull()) {
+            break;
+          }
+          // <
+          if (res_value.IsNull() || CmpBool::CmpTrue == res_value.CompareGreaterThan(input_value)) {
+            res_value = input_value;
+          }
+          break;
+        }
+        case AggregationType::MaxAggregate: {
+          if (input_value.IsNull()) {
+            break;
+          }
+          // >
+          if (res_value.IsNull() || CmpBool::CmpTrue == res_value.CompareLessThan(input_value)) {
+            res_value = input_value;
+          }
+          break;
+        }
       }
     }
   }
@@ -201,8 +250,8 @@ class AggregationExecutor : public AbstractExecutor {
   /** The child executor that produces tuples over which the aggregation is computed */
   std::unique_ptr<AbstractExecutor> child_;
   /** Simple aggregation hash table */
-  // TODO(Student): Uncomment SimpleAggregationHashTable aht_;
+  SimpleAggregationHashTable aht_;
   /** Simple aggregation hash table iterator */
-  // TODO(Student): Uncomment SimpleAggregationHashTable::Iterator aht_iterator_;
+  SimpleAggregationHashTable::Iterator aht_iterator_;
 };
 }  // namespace bustub

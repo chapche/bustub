@@ -50,7 +50,9 @@ auto UpdateExecutor::Next(Tuple *tuple, RID *rid) -> bool {
     }
     table_info_->table_->UpdateTupleMeta(TupleMeta{INVALID_TXN_ID, INVALID_TXN_ID, true}, *rid);
     for (auto index_info : index_info_vec) {
-      index_info->index_->DeleteEntry(*tuple, *rid, nullptr);
+      index_info->index_->DeleteEntry(
+          tuple->KeyFromTuple(table_info_->schema_, index_info->key_schema_, index_info->index_->GetKeyAttrs()), *rid,
+          nullptr);
     }
     auto new_tuple = Tuple{values, &child_executor_->GetOutputSchema()};
     auto r = table_info_->table_->InsertTuple(TupleMeta{INVALID_TXN_ID, INVALID_TXN_ID, false}, new_tuple);
