@@ -30,7 +30,7 @@ void CommitTest1() {
 }
 
 // NOLINTNEXTLINE
-TEST(CommitAbortTest, DISABLED_CommitTestA) { CommitTest1(); }
+TEST(CommitAbortTest, CommitTestA) { CommitTest1(); }
 
 void Test1(IsolationLevel lvl) {
   // should scan changes of committed txn
@@ -39,20 +39,59 @@ void Test1(IsolationLevel lvl) {
   Delete(txn1, *db, 233);
   Commit(*db, txn1);
   auto txn2 = Begin(*db, lvl);
+  Insert(txn2, *db, 1);
+  Delete(txn2, *db, 1);
   Scan(txn2, *db, {234});
   Commit(*db, txn2);
 }
 
-// NOLINTNEXTLINE
-TEST(VisibilityTest, DISABLED_TestA) {
-  // only this one will be public :)
-  Test1(IsolationLevel::READ_COMMITTED);
+void AbortTest1() {
+  auto db = GetDbForCommitAbortTest("AbortTest1");
+  auto txn1 = Begin(*db, IsolationLevel::READ_UNCOMMITTED);
+  Insert(txn1, *db, 1);
+  Abort(*db, txn1);
+  auto txn2 = Begin(*db, IsolationLevel::READ_UNCOMMITTED);
+  Scan(txn2, *db, {233, 234});
+  Commit(*db, txn2);
+}
+
+void AbortTest2() {
+  auto db = GetDbForCommitAbortTest("AbortTest2");
+  auto txn1 = Begin(*db, IsolationLevel::READ_UNCOMMITTED);
+  Delete(txn1, *db, 233);
+  Abort(*db, txn1);
+  auto txn2 = Begin(*db, IsolationLevel::READ_UNCOMMITTED);
+  Scan(txn2, *db, {233, 234});
+  Commit(*db, txn2);
+}
+
+void AbortTest3() {
+  auto db = GetDbForCommitAbortTest("AbortTest3");
+  auto txn1 = Begin(*db, IsolationLevel::READ_UNCOMMITTED);
+  Insert(txn1, *db, 1);
+  Delete(txn1, *db, 1);
+  Abort(*db, txn1);
+  auto txn2 = Begin(*db, IsolationLevel::READ_UNCOMMITTED);
+  Scan(txn2, *db, {233, 234});
+  Commit(*db, txn2);
 }
 
 // NOLINTNEXTLINE
-TEST(IsolationLevelTest, DISABLED_InsertTestA) {
+TEST(VisibilityTest, TestA) {
+  // only this one will be public :)
+  Test1(IsolationLevel::READ_COMMITTED);
+  AbortTest1();
+  AbortTest2();
+  AbortTest3();
+}
+
+// NOLINTNEXTLINE
+TEST(IsolationLevelTest, InsertTestA) {
   ExpectTwoTxn("InsertTestA.1", IsolationLevel::READ_UNCOMMITTED, IsolationLevel::READ_UNCOMMITTED, false, IS_INSERT,
                ExpectedOutcome::DirtyRead);
+
+  ExpectTwoTxn("InsertTestA.2", IsolationLevel::READ_COMMITTED, IsolationLevel::READ_UNCOMMITTED, false, IS_INSERT,
+               ExpectedOutcome::BlockOnRead);
 }
 
 }  // namespace bustub

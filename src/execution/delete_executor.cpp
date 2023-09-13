@@ -29,17 +29,23 @@ auto DeleteExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   int cnt = 0;
   auto table_info = exec_ctx_->GetCatalog()->GetTable(plan_->TableOid());
   auto index_info_vec = exec_ctx_->GetCatalog()->GetTableIndexes(table_info->name_);
+  auto txn = exec_ctx_->GetTransaction();
   while (true) {
     bool res = child_executor_->Next(tuple, rid);
     if (!res) {
       break;
     }
     cnt++;
-    table_info->table_->UpdateTupleMeta(TupleMeta{INVALID_TXN_ID, INVALID_TXN_ID, true}, *rid);
+    table_info->table_->UpdateTupleMeta(TupleMeta{txn->GetTransactionId(), txn->GetTransactionId(), true}, *rid);
+    TableWriteRecord write_record(table_info->oid_, *rid, table_info->table_.get());
+    write_record.wtype_ = WType::DELETE;
+    txn->AppendTableWriteRecord(write_record);
     for (auto index_info : index_info_vec) {
       index_info->index_->DeleteEntry(
           tuple->KeyFromTuple(table_info->schema_, index_info->key_schema_, index_info->index_->GetKeyAttrs()), *rid,
-          nullptr);
+          txn);
+      txn->AppendIndexWriteRecord(IndexWriteRecord(*rid, table_info->oid_, WType::DELETE, *tuple,
+                                                   index_info->index_oid_, exec_ctx_->GetCatalog()));
     }
   }
   std::vector<Value> values{Value(TypeId::INTEGER, cnt)};

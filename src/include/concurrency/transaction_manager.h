@@ -148,8 +148,10 @@ class TransactionManager {
     }
   }
 
+  void RevertWriteSet(Transaction *txn);
+
   std::atomic<txn_id_t> next_txn_id_{0};
-  LockManager *lock_manager_ __attribute__((__unused__));
+  LockManager *lock_manager_;
   LogManager *log_manager_ __attribute__((__unused__));
 };
 

@@ -15,8 +15,10 @@
 #include <algorithm>
 #include <condition_variable>  // NOLINT
 #include <list>
+#include <map>
 #include <memory>
 #include <mutex>  // NOLINT
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -297,6 +299,8 @@ class LockManager {
    */
   auto HasCycle(txn_id_t *txn_id) -> bool;
 
+  void RemoveWaitsForKey(txn_id_t txn_id);
+
   /**
    * @return all edges in current waits_for graph
    */
@@ -322,6 +326,15 @@ class LockManager {
   auto FindCycle(txn_id_t source_txn, std::vector<txn_id_t> &path, std::unordered_set<txn_id_t> &on_path,
                  std::unordered_set<txn_id_t> &visited, txn_id_t *abort_txn_id) -> bool;
   void UnlockAll();
+  void UpdateTxnTableLockSet(Transaction *txn, LockMode lock_mode, const table_oid_t &oid);
+  void UpdateTxnRowLockSet(Transaction *txn, LockMode lock_mode, const table_oid_t &oid, const RID &rid);
+  void DeleteTxnTableLockSet(Transaction *txn, LockMode lock_mode, const table_oid_t &oid);
+  void DeleteTxnRowLockSet(Transaction *txn, LockMode lock_mode, const table_oid_t &oid, const RID &rid);
+  void ChangeTxnState(Transaction *txn, LockMode lock_mode);
+  auto GetLockRequest(LockRequestQueue *lock_request_queue, LockMode lock_mode, txn_id_t txn_id, bool &is_compatible)
+      -> LockRequest *;
+  auto AreCurrentLockSatisfied(LockMode curr_lock_mode, LockMode requested_lock_mode) -> bool;
+  void BuildGraph();
 
   /** Structure that holds lock requests for a given table oid */
   std::unordered_map<table_oid_t, std::shared_ptr<LockRequestQueue>> table_lock_map_;
@@ -336,7 +349,7 @@ class LockManager {
   std::atomic<bool> enable_cycle_detection_;
   std::thread *cycle_detection_thread_;
   /** Waits-for graph representation. */
-  std::unordered_map<txn_id_t, std::vector<txn_id_t>> waits_for_;
+  std::map<txn_id_t, std::set<txn_id_t>> waits_for_;
   std::mutex waits_for_latch_;
 };
 
