@@ -49,6 +49,7 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
       lock_request->granted_ = false;
       DeleteTxnTableLockSet(txn, lock_request->lock_mode_, oid);
       lock_request->lock_mode_ = lock_mode;
+      q->cv_.notify_all();
     } else {
       LOG_DEBUG("do aborting INCOMPATIBLE_UPGRADE");
       txn->SetState(TransactionState::ABORTED);  // FIXME: shall we set aborted w/out release locks ?
